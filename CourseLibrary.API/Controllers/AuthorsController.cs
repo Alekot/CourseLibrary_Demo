@@ -21,13 +21,16 @@ namespace CourseLibrary.API.Controllers
         {
             _courseLibraryRepository = courseLibraryRepository ??
                 throw new ArgumentNullException(nameof(courseLibraryRepository));
-            _mapper = mapper ?? 
+            _mapper = mapper ??
                 throw new ArgumentNullException(nameof(mapper));
         }
         [HttpGet]
-        public ActionResult<IEnumerable<AuthorDto>> GetAuthors()
+        [HttpHead]
+        public ActionResult<IEnumerable<AuthorDto>> GetAuthors(
+            [FromQuery(Name = "mainCategory")] string mainCategory)
         {
-            var authorsFromRepo = _courseLibraryRepository.GetAuthors();
+            var authorsFromRepo = _courseLibraryRepository.GetAuthors(mainCategory);
+
             //var authors = new List<AuthorDto>();
             //foreach(var author in authorsFromRepo)
             //{
@@ -48,7 +51,7 @@ namespace CourseLibrary.API.Controllers
         {
             var authorFromRepo = _courseLibraryRepository.GetAuthor(authorId);
 
-            if(authorFromRepo == null)
+            if (authorFromRepo == null)
             {
                 return NotFound();
             }
