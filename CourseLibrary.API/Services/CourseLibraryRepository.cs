@@ -1,5 +1,5 @@
 ﻿using CourseLibrary.API.DbContexts;
-using CourseLibrary.API.Entities; 
+using CourseLibrary.API.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ namespace CourseLibrary.API.Services
     {
         private readonly CourseLibraryContext _context;
 
-        public CourseLibraryRepository(CourseLibraryContext context )
+        public CourseLibraryRepository(CourseLibraryContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -28,14 +28,14 @@ namespace CourseLibrary.API.Services
             }
             // always set the AuthorId to the passed-in authorId
             course.AuthorId = authorId;
-            _context.Courses.Add(course); 
-        }         
+            _context.Courses.Add(course);
+        }
 
         public void DeleteCourse(Course course)
         {
             _context.Courses.Remove(course);
         }
-  
+
         public Course GetCourse(Guid authorId, Guid courseId)
         {
             if (authorId == Guid.Empty)
@@ -106,7 +106,7 @@ namespace CourseLibrary.API.Services
 
             _context.Authors.Remove(author);
         }
-        
+
         public Author GetAuthor(Guid authorId)
         {
             if (authorId == Guid.Empty)
@@ -121,14 +121,30 @@ namespace CourseLibrary.API.Services
         {
             return _context.Authors.ToList<Author>();
         }
-        public IEnumerable<Author> GetAuthors(string mainCategory)
+        public IEnumerable<Author> GetAuthors(string mainCategory, string searchQuery)
         {
-            if (string.IsNullOrEmpty(mainCategory))
+            if (string.IsNullOrEmpty(mainCategory)
+                && string.IsNullOrEmpty(searchQuery))
+            {
                 return GetAuthors();
+            }
 
-            mainCategory = mainCategory.Trim();
+            var collection = _context.Authors as IQueryable<Author>;
 
-            return _context.Authors.Where(a => a.MainCategory == mainCategory).ToList<Author>();
+            if (!string.IsNullOrEmpty(mainCategory))
+            {
+                mainCategory = mainCategory.Trim();
+                collection = collection.Where(c => c.MainCategory == mainCategory);
+            }
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                searchQuery = searchQuery.Trim();
+                collection = collection.Where(c => c.MainCategory.Contains(searchQuery)
+                                || c.FirstName.Contains(searchQuery)
+                                || c.LastName.Contains(searchQuery));
+            }
+            //return _context.Authors.Where(a => a.MainCategory == mainCategory).ToList<Author>();
+            return collection.ToList();
         }
 
         public IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds)
@@ -164,7 +180,7 @@ namespace CourseLibrary.API.Services
         {
             if (disposing)
             {
-               // dispose resources when needed
+                // dispose resources when needed
             }
         }
     }
