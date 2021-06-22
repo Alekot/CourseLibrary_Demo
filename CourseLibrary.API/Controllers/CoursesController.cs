@@ -36,7 +36,7 @@ namespace CourseLibrary.API.Controllers
 
             return Ok(this.mapper.Map<IEnumerable<CourseDto>>(coursesForAuthorsFromRepo));
         }
-        [HttpGet("{courseId}", Name ="GetCourseForAuthor")]
+        [HttpGet("{courseId}", Name = "GetCourseForAuthor")]
         public ActionResult<CourseDto> GetCourseFromAuthor(Guid authorId, Guid courseId)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
@@ -66,6 +66,29 @@ namespace CourseLibrary.API.Controllers
             return CreatedAtRoute("GetCourseForAuthor",
                         new { authorId = authorId, courseId = courseToReturn.Id }, courseToReturn);
 
+        }
+        [HttpPut("{courseId}")]
+        public ActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, CourseForUpdateDto course)
+        {
+            if (!this.courseLibraryRepository.AuthorExists(authorId))
+            {
+                return NotFound();
+            }
+
+            var courseForAuthorFromRepo = this.courseLibraryRepository.GetCourse(authorId, courseId);
+
+            if (courseForAuthorFromRepo == null)
+            {
+                return NotFound();
+            }
+
+            this.mapper.Map(course, courseForAuthorFromRepo);
+
+            this.courseLibraryRepository.UpdateCourse(courseForAuthorFromRepo);
+            this.courseLibraryRepository.Save();
+
+            //return Ok(courseForAuthorFromRepo); //this returns 200 ok status code, with the modified object
+            return NoContent(); //this returns 204 status code
         }
     }
 }
