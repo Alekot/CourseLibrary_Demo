@@ -64,11 +64,11 @@ namespace CourseLibrary.API.Controllers
 
             var courseToReturn = this.mapper.Map<CourseDto>(courseEntity);
             return CreatedAtRoute("GetCourseForAuthor",
-                        new { authorId = authorId, courseId = courseToReturn.Id }, courseToReturn);
+                        new { authorId, courseId = courseToReturn.Id }, courseToReturn);
 
         }
         [HttpPut("{courseId}")]
-        public ActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, CourseForUpdateDto course)
+        public IActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, CourseForUpdateDto course)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
             {
@@ -79,9 +79,22 @@ namespace CourseLibrary.API.Controllers
 
             if (courseForAuthorFromRepo == null)
             {
-                return NotFound();
+                //return NotFound(); //commented out to implement upserting
+                var courseToAdd = this.mapper.Map<Course>(course);
+                courseToAdd.Id = courseId;
+
+                this.courseLibraryRepository.AddCourse(authorId, courseToAdd);
+                this.courseLibraryRepository.Save();
+
+                var courseToReturn = this.mapper.Map<CourseDto>(courseToAdd);
+
+                return CreatedAtRoute("GetCourseForAuthor",
+                        new { authorId, courseId = courseToReturn.Id }, courseToReturn);
             }
 
+            //map the entity to a CourseForUpdateDto
+            //apply the updated field values to that dto
+            //map the CourseForUpdateDto back to an entity
             this.mapper.Map(course, courseForAuthorFromRepo);
 
             this.courseLibraryRepository.UpdateCourse(courseForAuthorFromRepo);
