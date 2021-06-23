@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json.Serialization;
 using System;
 
 namespace CourseLibrary.API
@@ -30,6 +31,11 @@ namespace CourseLibrary.API
             {
                 setupAction.ReturnHttpNotAcceptable = true;
             })
+                .AddNewtonsoftJson(setupAction =>
+                {
+                    setupAction.SerializerSettings.ContractResolver =
+                       new CamelCasePropertyNamesContractResolver();
+                })
                  .AddXmlDataContractSerializerFormatters()
                  .ConfigureApiBehaviorOptions(setupAction =>
                  {
@@ -49,18 +55,30 @@ namespace CourseLibrary.API
                          //find out whih status code to use
                          var actionExecutingContext = context as ActionExecutingContext;
 
+                         // if there are modelstate errors & all keys were correctly
+                         // found/parsed we're dealing with validation errors
+                         //
+                         // if the context couldn't be cast to an ActionExecutingContext
+                         // because it's a ControllerContext, we're dealing with an issue 
+                         // that happened after the initial input was correctly parsed.  
+                         // This happens, for example, when manually validating an object inside
+                         // of a controller action.  That means that by then all keys
+                         // WERE correctly found and parsed.  In that case, we're
+                         // thus also dealing with a validation error.
                          if ((context.ModelState.ErrorCount > 0) &&
                             (actionExecutingContext?.ActionArguments.Count ==
                             context.ActionDescriptor.Parameters.Count))
                          {
-                             problemDetails.Type = "https://something.com";
+                             problemDetails.Type = "https://courselibrary.com/modelvalidationproblem";
                              problemDetails.Status = StatusCodes.Status422UnprocessableEntity;
                              problemDetails.Title = "One or more validation errors occured.";
+
                              return new UnprocessableEntityObjectResult(problemDetails)
                              {
                                  ContentTypes = { "application/problem+json" }
                              };
                          }
+
                          //if one of the arguments wasn't correctly found/couldn't be parsed
                          //we're dealing with null/unparseable input
                          problemDetails.Status = StatusCodes.Status400BadRequest;

@@ -2,7 +2,12 @@
 using CourseLibrary.API.Entities;
 using CourseLibrary.API.Models;
 using CourseLibrary.API.Services;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -102,6 +107,48 @@ namespace CourseLibrary.API.Controllers
 
             //return Ok(courseForAuthorFromRepo); //this returns 200 ok status code, with the modified object
             return NoContent(); //this returns 204 status code
+        }
+        [HttpPatch("{courseId}")]
+        public ActionResult PartiallyUpdateCourseForAuthor(Guid authorId,
+            Guid courseId,
+            JsonPatchDocument<CourseForUpdateDto> patchDocument)
+        {
+            if (!this.courseLibraryRepository.AuthorExists(authorId))
+            {
+                return NotFound();
+            }
+
+            var courseForAuthorFromRepo = this.courseLibraryRepository.GetCourse(authorId, courseId);
+
+            if (courseForAuthorFromRepo == null)
+            {
+                return NotFound();
+            }
+
+            var courseToPatch = this.mapper.Map<CourseForUpdateDto>(courseForAuthorFromRepo);
+            //add validation
+            patchDocument.ApplyTo(courseToPatch, ModelState);
+            if (!TryValidateModel(courseToPatch))
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            //map the entity to a CourseForUpdateDto
+            //apply the updated field values to that dto
+            //map the CourseForUpdateDto back to an entity
+            this.mapper.Map(courseToPatch, courseForAuthorFromRepo);
+            this.courseLibraryRepository.UpdateCourse(courseForAuthorFromRepo);
+            this.courseLibraryRepository.Save();
+
+            return NoContent();
+        }
+        public override ActionResult ValidationProblem([ActionResultObjectValue] ModelStateDictionary modelStateDictionary)
+        {
+            var options = HttpContext.RequestServices
+                .GetRequiredService<IOptions<ApiBehaviorOptions>>();
+
+            return (ActionResult)options.Value.InvalidModelStateResponseFactory(ControllerContext);
+            //return base.ValidationProblem(modelStateDictionary);
         }
     }
 }
