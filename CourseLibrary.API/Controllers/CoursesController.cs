@@ -30,6 +30,7 @@ namespace CourseLibrary.API.Controllers
                 throw new ArgumentNullException(nameof(mapper));
         }
 
+        [HttpGet]
         public ActionResult<IEnumerable<CourseDto>> GetCoursesForAuthor(Guid authorId)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
@@ -41,6 +42,7 @@ namespace CourseLibrary.API.Controllers
 
             return Ok(this.mapper.Map<IEnumerable<CourseDto>>(coursesForAuthorsFromRepo));
         }
+
         [HttpGet("{courseId}", Name = "GetCourseForAuthor")]
         public ActionResult<CourseDto> GetCourseFromAuthor(Guid authorId, Guid courseId)
         {
@@ -56,8 +58,7 @@ namespace CourseLibrary.API.Controllers
         }
         [HttpPost]
         public ActionResult<CourseDto> CreateCourseForAuthor(
-            Guid authorId, 
-            CourseForCreationDto course)
+            Guid authorId, CourseForCreationDto course)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
             {
@@ -74,9 +75,7 @@ namespace CourseLibrary.API.Controllers
 
         }
         [HttpPut("{courseId}")]
-        public IActionResult UpdateCourseForAuthor(Guid authorId,
-            Guid courseId, 
-            CourseForUpdateDto course)
+        public IActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, CourseForUpdateDto course)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
             {
@@ -97,8 +96,7 @@ namespace CourseLibrary.API.Controllers
                 var courseToReturn = this.mapper.Map<CourseDto>(courseToAdd);
 
                 return CreatedAtRoute("GetCourseForAuthor",
-                        new { authorId, courseId = courseToReturn.Id },
-                        courseToReturn);
+                        new { authorId, courseId = courseToReturn.Id }, courseToReturn);
             }
 
             //map the entity to a CourseForUpdateDto
@@ -112,6 +110,7 @@ namespace CourseLibrary.API.Controllers
             //return Ok(courseForAuthorFromRepo); //this returns 200 ok status code, with the modified object
             return NoContent(); //this returns 204 status code
         }
+
         [HttpPatch("{courseId}")]
         public ActionResult PartiallyUpdateCourseForAuthor(Guid authorId,
             Guid courseId,
@@ -126,17 +125,15 @@ namespace CourseLibrary.API.Controllers
 
             if (courseForAuthorFromRepo == null)
             {
-                //commented out to implement upserting when course does not exist
-                //return NotFound();
-
                 var courseDto = new CourseForUpdateDto();
                 patchDocument.ApplyTo(courseDto, ModelState);
+
                 if (!TryValidateModel(courseDto))
                 {
                     return ValidationProblem(ModelState);
                 }
 
-                var courseToAdd = this.mapper.Map<Course>(courseDto);
+                var courseToAdd = this.mapper.Map<Entities.Course>(courseDto);
                 courseToAdd.Id = courseId;
 
                 this.courseLibraryRepository.AddCourse(authorId, courseToAdd);
@@ -150,29 +147,28 @@ namespace CourseLibrary.API.Controllers
             }
 
             var courseToPatch = this.mapper.Map<CourseForUpdateDto>(courseForAuthorFromRepo);
-            //add validation
+            // add validation
             patchDocument.ApplyTo(courseToPatch, ModelState);
+
             if (!TryValidateModel(courseToPatch))
             {
                 return ValidationProblem(ModelState);
             }
 
-            //map the entity to a CourseForUpdateDto
-            //apply the updated field values to that dto
-            //map the CourseForUpdateDto back to an entity
             this.mapper.Map(courseToPatch, courseForAuthorFromRepo);
+
             this.courseLibraryRepository.UpdateCourse(courseForAuthorFromRepo);
+
             this.courseLibraryRepository.Save();
 
             return NoContent();
         }
-        public override ActionResult ValidationProblem([ActionResultObjectValue] ModelStateDictionary modelStateDictionary)
+        public override ActionResult ValidationProblem(
+            [ActionResultObjectValue] ModelStateDictionary modelStateDictionary)
         {
             var options = HttpContext.RequestServices
                 .GetRequiredService<IOptions<ApiBehaviorOptions>>();
-
             return (ActionResult)options.Value.InvalidModelStateResponseFactory(ControllerContext);
-            //return base.ValidationProblem(modelStateDictionary);
         }
     }
 }
