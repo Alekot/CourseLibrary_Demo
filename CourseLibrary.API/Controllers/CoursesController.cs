@@ -56,7 +56,8 @@ namespace CourseLibrary.API.Controllers
         }
         [HttpPost]
         public ActionResult<CourseDto> CreateCourseForAuthor(
-            Guid authorId, CourseForCreationDto course)
+            Guid authorId, 
+            CourseForCreationDto course)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
             {
@@ -73,7 +74,9 @@ namespace CourseLibrary.API.Controllers
 
         }
         [HttpPut("{courseId}")]
-        public IActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, CourseForUpdateDto course)
+        public IActionResult UpdateCourseForAuthor(Guid authorId,
+            Guid courseId, 
+            CourseForUpdateDto course)
         {
             if (!this.courseLibraryRepository.AuthorExists(authorId))
             {
@@ -94,7 +97,8 @@ namespace CourseLibrary.API.Controllers
                 var courseToReturn = this.mapper.Map<CourseDto>(courseToAdd);
 
                 return CreatedAtRoute("GetCourseForAuthor",
-                        new { authorId, courseId = courseToReturn.Id }, courseToReturn);
+                        new { authorId, courseId = courseToReturn.Id },
+                        courseToReturn);
             }
 
             //map the entity to a CourseForUpdateDto
@@ -122,7 +126,27 @@ namespace CourseLibrary.API.Controllers
 
             if (courseForAuthorFromRepo == null)
             {
-                return NotFound();
+                //commented out to implement upserting when course does not exist
+                //return NotFound();
+
+                var courseDto = new CourseForUpdateDto();
+                patchDocument.ApplyTo(courseDto, ModelState);
+                if (!TryValidateModel(courseDto))
+                {
+                    return ValidationProblem(ModelState);
+                }
+
+                var courseToAdd = this.mapper.Map<Course>(courseDto);
+                courseToAdd.Id = courseId;
+
+                this.courseLibraryRepository.AddCourse(authorId, courseToAdd);
+                this.courseLibraryRepository.Save();
+
+                var courseToReturn = this.mapper.Map<CourseDto>(courseToAdd);
+
+                return CreatedAtRoute("GetCourseForAuthor",
+                    new { authorId, courseId = courseToReturn.Id },
+                    courseToReturn);
             }
 
             var courseToPatch = this.mapper.Map<CourseForUpdateDto>(courseForAuthorFromRepo);
