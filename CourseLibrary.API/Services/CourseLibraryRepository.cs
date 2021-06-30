@@ -1,5 +1,6 @@
 ﻿using CourseLibrary.API.DbContexts;
 using CourseLibrary.API.Entities;
+using CourseLibrary.API.Helpers;
 using CourseLibrary.API.ResourceParameters;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ namespace CourseLibrary.API.Services
     {
         private readonly CourseLibraryContext _context;
 
-        public CourseLibraryRepository(CourseLibraryContext context )
+        public CourseLibraryRepository(CourseLibraryContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -29,14 +30,14 @@ namespace CourseLibrary.API.Services
             }
             // always set the AuthorId to the passed-in authorId
             course.AuthorId = authorId;
-            _context.Courses.Add(course); 
-        }         
+            _context.Courses.Add(course);
+        }
 
         public void DeleteCourse(Course course)
         {
             _context.Courses.Remove(course);
         }
-  
+
         public Course GetCourse(Guid authorId, Guid courseId)
         {
             if (authorId == Guid.Empty)
@@ -107,7 +108,7 @@ namespace CourseLibrary.API.Services
 
             _context.Authors.Remove(author);
         }
-        
+
         public Author GetAuthor(Guid authorId)
         {
             if (authorId == Guid.Empty)
@@ -122,11 +123,11 @@ namespace CourseLibrary.API.Services
         {
             return _context.Authors.ToList<Author>();
         }
-        public IEnumerable<Author> GetAuthors(AuthorsResourceParameters authorsResourceParameters) //string mainCategory, string searchQuery
+        public PagedList<Author> GetAuthors(AuthorsResourceParameters authorsResourceParameters) //string mainCategory, string searchQuery
         {
             if (authorsResourceParameters == null)
             {
-                return GetAuthors();
+                throw new ArgumentNullException(nameof(authorsResourceParameters));
             }
 
             var collection = _context.Authors as IQueryable<Author>;
@@ -144,7 +145,9 @@ namespace CourseLibrary.API.Services
                                 || c.LastName.Contains(searchQuery));
             }
             //return _context.Authors.Where(a => a.MainCategory == mainCategory).ToList<Author>();
-            return collection.ToList();
+            return PagedList<Author>.Create(collection,
+                authorsResourceParameters.PageNumber,
+                authorsResourceParameters.PageSize);
         }
 
         public IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds)
@@ -180,7 +183,7 @@ namespace CourseLibrary.API.Services
         {
             if (disposing)
             {
-               // dispose resources when needed
+                // dispose resources when needed
             }
         }
     }
